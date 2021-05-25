@@ -23,23 +23,18 @@ The user that the repositories with required versions belong to.
 Used for link generation for changelog additions.
 
 ### Outputs
-#### `result`
+No outputs
 
 ### Example usage
+Should follow after a changelog file is generated, or be referenced directly
+
 ```yaml
-      - name: cfn_nag_scan packaged template
-        id: scan-packaged
-        uses: CumulusDS/required-versions-action@v0.0.1
+      - name: dependent versions
+        uses: CumulusDS/required-versions-action@master
         with:
-          input: some-input
-```
-
-The results can be later referenced again for use in a separate step if desired using the `results` output from the step.
-In order to reference the `result` output, you must assign and `id` to the step for future referencing.
-
-```yaml
-      - name: reprint results
-        run: echo "${{ steps.action.outputs.result }}"
+          githubUser: "CumulusDS"
+          version: ${{ env.mostRecentTag }}
+          changelog: "changelog/changelog.md"
 ```
 
 
