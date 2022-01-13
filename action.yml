@@ -7,7 +7,7 @@ inputs:
   changelog:
     description: 'The changelog to add the information to.'
     required: false
-    default: 'CHANGELOG.md'
+    default: 'changelog.md'
   githubUser:
     description: 'The user that the repositories with required versions belong to'
     required: true
@@ -15,37 +15,14 @@ runs:
   using: "composite"
   steps:
     - name: required versions
-      id: install
-      run: |
-        echo "::group::RequiredVersions"
-        apiVersions=$(jq -r '. | select(.apiVersions != null)' package.json)
-        if [[ -z apiVersions ]]; then
-          echo "No required versions exist"
-        else
-          sed -i '/\[${{ inputs.version }}\]/a ### Required Versions\n\n### Release Notes\n' ${{ inputs.changelog }}
-          versionArray=($(jq -r '.apiVersions | keys | .[]' package.json))
-          echo "::debug::versionArray is ${versionArray[@]}"
-          arrayLength=$(jq '.apiVersions | length' package.json)
-          echo "::debug::arrayLength is ${arrayLength}"
-          for ((i=0; i<"${arrayLength}"; i++)); do
-            echo "::debug::index is ${i}"
-            key=${versionArray[i]}
-            echo "::debug::key is ${key}"
-            val=$(jq -r --arg KEY "${key}" '.apiVersions."\($KEY)"' package.json)
-            echo "::debug::val is ${val}"
-            case $(echo ${val} | grep -Fq "^" >/dev/null; echo $?) in
-              0)  orNewer=" or newer" && echo "::debug::orNewer is true";;
-              1)  orNewer="" && echo "::debug::orNewer is false";;
-              *)  echo "ERROR";;
-            esac
-
-            sed -i '/### Required Versions/a - **\['$key'\]\['$key'\]**: *\['$val'\]\['$key'-version\]'"$orNewer"'*' ${{ inputs.changelog }}
-            linkVersion=${val//[^0-9.]/}
-            echo "::debug::linkVersion is ${linkVersion}"
-            sed -i '$a['$key']: https://github.com/${{ inputs.githubUser }}/'$key'/releases' ${{ inputs.changelog }}
-            sed -i '$a['$key'-version]: https://github.com/${{ inputs.githubUser }}/'$key'/releases/tag/v'$linkVersion'' ${{ inputs.changelog }}
-          done
-        fi
-        echo "::endgroup::"
+      id: required
+      run: ${{ github.action_path }}/entrypoint.sh
       shell: bash
-
+      env:
+        version: ${{ inputs.version }}
+        githubUser: ${{ inputs.github.user }}
+        changelog: ${{ inputs.changelog }}
+    - name: lint
+      uses: avto-dev/markdown-lint@v1
+      with:
+        args: './${{ inputs.changelog }} --fix'
